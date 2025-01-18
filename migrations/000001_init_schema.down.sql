@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS claim_requests;
+DROP TABLE IF EXISTS prize_groups;
+DROP TABLE IF EXISTS prizes;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS users;
