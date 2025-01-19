@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.22-alpine AS builder  # Update versi Go ke yang terbaru yang tersedia
+FROM golang:1.22-alpine AS builder
 WORKDIR /app
 
 # Install required build tools
