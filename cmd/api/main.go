@@ -2,14 +2,15 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"shopping-gamification/internal/delivery/http/handler"
-	"shopping-gamification/internal/repository/mysql"
+	"shopping-gamification/internal/repository/postgres"
 	"shopping-gamification/internal/usecase"
 	"shopping-gamification/pkg/config"
 
 	"github.com/gin-gonic/gin"
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -19,18 +20,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Create the connection string
-	dsn := cfg.DBUser + ":" + cfg.DBPassword + "@tcp(" + cfg.DBHost + ":" + cfg.DBPort + ")/" + cfg.DBName + "?parseTime=true"
+	// Create the connection string PostgreSQL
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName)
 
 	// Connect to the database
-	db, err := sql.Open("mysql", dsn)
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
 	// Initialize the repository and usecase
-	repo := mysql.NewRepository(db)
+	repo := postgres.NewRepository(db)
 	productUsecase := usecase.NewProductUsecase(repo)
 	claimUsecase := usecase.NewClaimUsecase(repo)
 

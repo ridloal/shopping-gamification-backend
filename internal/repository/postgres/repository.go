@@ -1,4 +1,4 @@
-package mysql
+package postgres
 
 import (
 	"database/sql"
@@ -34,7 +34,7 @@ func (r *Repository) GetProducts() ([]domain.Product, error) {
 }
 
 func (r *Repository) GetProductByID(productID int64) (domain.Product, error) {
-	query := `SELECT id, name, description, price, image_url, stock, status FROM products WHERE id = ?`
+	query := `SELECT id, name, description, price, image_url, stock, status FROM products WHERE id = $1`
 	rows, err := r.db.Query(query, productID)
 	if err != nil {
 		return domain.Product{}, err
@@ -57,7 +57,7 @@ func (r *Repository) GetPrizeGroupsByProductID(productID int64) ([]domain.PrizeG
                p.name, p.description, p.discount_percentage, p.quota, p.remaining_quota, p.status
         FROM prize_groups pg
         JOIN prizes p ON pg.prize_id = p.id
-        WHERE pg.product_id = ? AND pg.status = true`
+        WHERE pg.product_id = $1 AND pg.status = true`
 
 	rows, err := r.db.Query(query, productID)
 	if err != nil {
@@ -85,7 +85,7 @@ func (r *Repository) CreateClaimRequest(req *domain.ClaimRequest) error {
 	query := `
         INSERT INTO claim_requests 
         (product_id, social_media_username, social_media_platform, post_url)
-        VALUES (?, ?, ?, ?)`
+        VALUES ($1, $2, $3, $4)`
 
 	result, err := r.db.Exec(query, req.ProductID, req.SocialMediaUsername,
 		req.SocialMediaPlatform, req.PostURL)
@@ -102,7 +102,7 @@ func (r *Repository) CreateClaimRequest(req *domain.ClaimRequest) error {
 }
 
 func (r *Repository) UpdateClaimRequestPrize(claimID int64, prizeID int64) error {
-	query := `UPDATE claim_requests SET prize_id = ? WHERE id = ?`
+	query := `UPDATE claim_requests SET prize_id = $1 WHERE id = $2`
 	_, err := r.db.Exec(query, prizeID, claimID)
 	return err
 }
