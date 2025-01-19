@@ -64,7 +64,7 @@ func main() {
 	r := gin.Default()
 
 	// Add health check endpoint
-	r.GET("/health", func(c *gin.Context) {
+	r.GET("/health-check", func(c *gin.Context) {
 		err := db.Ping()
 		if err != nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "message": "database connection failed"})
