@@ -1,4 +1,4 @@
-package repository
+package mysql
 
 import (
 	"database/sql"
@@ -31,6 +31,24 @@ func (r *Repository) GetProducts() ([]domain.Product, error) {
 		products = append(products, p)
 	}
 	return products, nil
+}
+
+func (r *Repository) GetProductByID(productID int64) (domain.Product, error) {
+	query := `SELECT id, name, description, price, image_url, stock, status FROM products WHERE id = ?`
+	rows, err := r.db.Query(query, productID)
+	if err != nil {
+		return domain.Product{}, err
+	}
+	defer rows.Close()
+
+	var product domain.Product
+	for rows.Next() {
+		err := rows.Scan(&product.ID, &product.Name, &product.Description, &product.Price, &product.ImageURL, &product.Stock, &product.Status)
+		if err != nil {
+			return domain.Product{}, err
+		}
+	}
+	return product, nil
 }
 
 func (r *Repository) GetPrizeGroupsByProductID(productID int64) ([]domain.PrizeGroup, error) {

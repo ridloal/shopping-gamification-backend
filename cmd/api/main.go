@@ -3,84 +3,43 @@ package main
 import (
 	"database/sql"
 	"log"
-	"shopping-gamification/internal/domain"
-	repository "shopping-gamification/internal/repository/mysql"
-	"strconv"
+	"shopping-gamification/internal/delivery/http/handler"
+	"shopping-gamification/internal/repository/mysql"
+	"shopping-gamification/internal/usecase"
+	"shopping-gamification/pkg/config"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
-	db, err := sql.Open("mysql", "root:root@tcp(localhost:3306)/shopping_gamification?parseTime=true")
+	// Load configuration
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create the connection string
+	dsn := cfg.DBUser + ":" + cfg.DBPassword + "@tcp(" + cfg.DBHost + ":" + cfg.DBPort + ")/" + cfg.DBName + "?parseTime=true"
+
+	// Connect to the database
+	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
-	repo := repository.NewRepository(db)
+	// Initialize the repository and usecase
+	repo := mysql.NewRepository(db)
+	productUsecase := usecase.NewProductUsecase(repo)
+	claimUsecase := usecase.NewClaimUsecase(repo)
+
+	// Initialize the Gin engine
 	r := gin.Default()
 
-	r.GET("/products", func(c *gin.Context) {
-		products, err := repo.GetProducts()
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(200, products)
-	})
-
-	r.GET("/products/:id/prize-groups", func(c *gin.Context) {
-		productID := c.Param("id")
-		id, err := strconv.ParseInt(productID, 10, 64)
-		if err != nil {
-			c.JSON(400, gin.H{"error": "Invalid product ID"})
-			return
-		}
-		prizeGroups, err := repo.GetPrizeGroupsByProductID(id)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(200, prizeGroups)
-	})
-
-	r.POST("/claim-requests", func(c *gin.Context) {
-		var req domain.ClaimRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(400, gin.H{"error": err.Error()})
-			return
-		}
-
-		if err := repo.CreateClaimRequest(&req); err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(201, req)
-	})
-
-	r.PATCH("/claim-requests/:id/prize", func(c *gin.Context) {
-		claimID := c.Param("id")
-		id, err := strconv.ParseInt(claimID, 10, 64)
-		if err != nil {
-			c.JSON(400, gin.H{"error": "Invalid claim ID"})
-			return
-		}
-		var req struct {
-			PrizeID int64 `json:"prize_id" binding:"required"`
-		}
-
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(400, gin.H{"error": err.Error()})
-			return
-		}
-
-		if err := repo.UpdateClaimRequestPrize(id, req.PrizeID); err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(200, gin.H{"message": "Prize updated successfully"})
-	})
+	// Initialize handler
+	handler.NewProductHandler(r, productUsecase)
+	handler.NewClaimHandler(r, claimUsecase)
 
 	r.Run(":8080")
 }

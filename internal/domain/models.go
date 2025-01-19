@@ -40,3 +40,14 @@ type ClaimRequest struct {
 	VerificationStatus  string  `json:"verification_status"`
 	ClaimCode           *string `json:"claim_code"`
 }
+
+type ProductRepository interface {
+	GetProducts() ([]Product, error)
+	GetProductByID(productID int64) (Product, error)
+	GetPrizeGroupsByProductID(productID int64) ([]PrizeGroup, error)
+}
+
+type ClaimRepository interface {
+	CreateClaimRequest(req *ClaimRequest) error
+	UpdateClaimRequestPrize(claimID int64, prizeID int64) error
+}
