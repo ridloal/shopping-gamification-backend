@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  PROJECT_ID: shopping-gamification
+  PROJECT_ID: ridloal-project
   REGION: asia-southeast1
   SERVICE_NAME: shopping-gamification-api
 
@@ -43,4 +43,5 @@ jobs:
             --set-env-vars "DB_HOST=${{ secrets.DB_HOST }}" \
             --set-env-vars "DB_USER=${{ secrets.DB_USER }}" \
             --set-env-vars "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
+            --set-env-vars "DB_PORT=${{ secrets.DB_PORT }}" \
             --set-env-vars "DB_NAME=${{ secrets.DB_NAME }}"
