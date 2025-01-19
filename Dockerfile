@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.22-alpine AS builder  # Update versi Go ke yang terbaru yang tersedia
 WORKDIR /app
 
 # Install required build tools
@@ -7,6 +7,10 @@ RUN apk add --no-cache git make
 
 # Copy go mod files
 COPY go.mod go.sum ./
+
+# Izinkan penggunaan versi Go yang lebih baru
+ENV GOTOOLCHAIN=auto
+
 RUN go mod download
 
 # Copy source code
