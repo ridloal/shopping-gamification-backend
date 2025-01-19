@@ -44,6 +44,7 @@ jobs:
             --region ${{ env.REGION }} \
             --platform managed \
             --allow-unauthenticated \
+            --set-env-vars "PORT=8080" \
             --set-env-vars "DB_HOST=${{ secrets.DB_HOST }}" \
             --set-env-vars "DB_USER=${{ secrets.DB_USER }}" \
             --set-env-vars "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
