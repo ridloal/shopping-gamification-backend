@@ -30,6 +30,9 @@ RUN apk --no-cache add ca-certificates
 COPY --from=builder /app/main .
 COPY --from=builder /app/migrations ./migrations
 
+# Create empty .env file to prevent errors
+RUN touch .env
+
 # Expose port
 EXPOSE 8080
 
