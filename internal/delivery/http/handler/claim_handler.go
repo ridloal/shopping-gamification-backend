@@ -17,6 +17,7 @@ type ClaimHandler struct {
 func NewClaimHandler(r *gin.Engine, u usecase.ClaimUsecase) {
 	handler := &ClaimHandler{usecase: u}
 	r.POST("/claims", middleware.ValidateRequest(&domain.ClaimRequestInput{}), handler.CreateClaimRequest)
+	r.GET("/claims/:id", handler.GetClaimRequestByID)
 	r.PATCH("/claims/:id/prizes/:prize_id", handler.UpdateClaimRequestPrize)
 }
 
@@ -34,6 +35,21 @@ func (h *ClaimHandler) CreateClaimRequest(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, claimReq)
+}
+
+func (h *ClaimHandler) GetClaimRequestByID(c *gin.Context) {
+	claimID := c.Param("id")
+	id, err := strconv.ParseInt(claimID, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid claim ID"})
+		return
+	}
+	claimReq, err := h.usecase.GetClaimRequestByID(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, claimReq)
 }
 
 func (h *ClaimHandler) UpdateClaimRequestPrize(c *gin.Context) {

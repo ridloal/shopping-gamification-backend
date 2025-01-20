@@ -99,6 +99,24 @@ func (r *Repository) CreateClaimRequest(req *domain.ClaimRequestInput) (domain.C
 	return claimRequest, nil
 }
 
+func (r *Repository) GetClaimRequestByID(claimID int64) (domain.ClaimRequest, error) {
+	query := `SELECT id, product_id, social_media_username, social_media_platform, post_url, nomor_whatsapp, email, verification_status, claim_code, is_liked, is_comment, is_shared, is_follow, prize_id, user_id, created_at, updated_at, claimed_at FROM claim_requests WHERE id = $1`
+	rows, err := r.db.Query(query, claimID)
+	if err != nil {
+		return domain.ClaimRequest{}, err
+	}
+	defer rows.Close()
+
+	var claimReq domain.ClaimRequest
+	for rows.Next() {
+		err := rows.Scan(&claimReq.ID, &claimReq.ProductID, &claimReq.SocialMediaUsername, &claimReq.SocialMediaPlatform, &claimReq.PostURL, &claimReq.NomorWhatsapp, &claimReq.Email, &claimReq.VerificationStatus, &claimReq.ClaimCode, &claimReq.IsLiked, &claimReq.IsComment, &claimReq.IsShared, &claimReq.IsFollow, &claimReq.PrizeID, &claimReq.UserID, &claimReq.CreatedAt, &claimReq.UpdatedAt, &claimReq.ClaimedAt)
+		if err != nil {
+			return domain.ClaimRequest{}, err
+		}
+	}
+	return claimReq, nil
+}
+
 func (r *Repository) UpdateClaimRequestPrize(claimID int64, prizeID int64) error {
 	query := `UPDATE claim_requests SET prize_id = $1 WHERE id = $2`
 	_, err := r.db.Exec(query, prizeID, claimID)
