@@ -81,24 +81,22 @@ func (r *Repository) GetPrizeGroupsByProductID(productID int64) ([]domain.PrizeG
 	return groups, nil
 }
 
-func (r *Repository) CreateClaimRequest(req *domain.ClaimRequest) error {
+func (r *Repository) CreateClaimRequest(req *domain.ClaimRequestInput) (domain.ClaimRequest, error) {
 	query := `
-        INSERT INTO claim_requests 
-        (product_id, social_media_username, social_media_platform, post_url)
-        VALUES ($1, $2, $3, $4)`
+		INSERT INTO claim_requests 
+		(product_id, social_media_username, social_media_platform, post_url, nomor_whatsapp, email)
+		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, product_id, social_media_username, social_media_platform, post_url, nomor_whatsapp, email`
 
-	result, err := r.db.Exec(query, req.ProductID, req.SocialMediaUsername,
-		req.SocialMediaPlatform, req.PostURL)
+	var claimRequest domain.ClaimRequest
+	err := r.db.QueryRow(query, req.ProductID, req.SocialMediaUsername,
+		req.SocialMediaPlatform, req.PostURL, req.NomorWhatsapp, req.Email).Scan(
+		&claimRequest.ID, &claimRequest.ProductID, &claimRequest.SocialMediaUsername,
+		&claimRequest.SocialMediaPlatform, &claimRequest.PostURL, &claimRequest.NomorWhatsapp, &claimRequest.Email)
 	if err != nil {
-		return err
+		return domain.ClaimRequest{}, err
 	}
 
-	id, err := result.LastInsertId()
-	if err != nil {
-		return err
-	}
-	req.ID = id
-	return nil
+	return claimRequest, nil
 }
 
 func (r *Repository) UpdateClaimRequestPrize(claimID int64, prizeID int64) error {

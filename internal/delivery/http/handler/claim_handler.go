@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"shopping-gamification/internal/delivery/http/middleware"
 	"shopping-gamification/internal/domain"
 	"shopping-gamification/internal/usecase"
 	"strconv"
@@ -15,23 +16,24 @@ type ClaimHandler struct {
 
 func NewClaimHandler(r *gin.Engine, u usecase.ClaimUsecase) {
 	handler := &ClaimHandler{usecase: u}
-	r.POST("/claims", handler.CreateClaimRequest)
+	r.POST("/claims", middleware.ValidateRequest(&domain.ClaimRequestInput{}), handler.CreateClaimRequest)
 	r.PATCH("/claims/:id/prizes/:prize_id", handler.UpdateClaimRequestPrize)
 }
 
 func (h *ClaimHandler) CreateClaimRequest(c *gin.Context) {
-	var req domain.ClaimRequest
-	err := c.BindJSON(&req)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	validatedInput, exists := c.Get("validated_input")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get validated input"})
 		return
 	}
-	err = h.usecase.CreateClaimRequest(&req)
+
+	req := validatedInput.(*domain.ClaimRequestInput)
+	claimReq, err := h.usecase.CreateClaimRequest(req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, req)
+	c.JSON(http.StatusCreated, claimReq)
 }
 
 func (h *ClaimHandler) UpdateClaimRequestPrize(c *gin.Context) {

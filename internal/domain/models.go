@@ -39,6 +39,8 @@ type ClaimRequest struct {
 	PostURL             string  `json:"post_url"`
 	VerificationStatus  string  `json:"verification_status"`
 	ClaimCode           *string `json:"claim_code"`
+	NomorWhatsapp       string  `json:"nomor_whatsapp"`
+	Email               string  `json:"email"`
 }
 
 type ProductRepository interface {
@@ -48,6 +50,6 @@ type ProductRepository interface {
 }
 
 type ClaimRepository interface {
-	CreateClaimRequest(req *ClaimRequest) error
+	CreateClaimRequest(req *ClaimRequestInput) (ClaimRequest, error)
 	UpdateClaimRequestPrize(claimID int64, prizeID int64) error
 }

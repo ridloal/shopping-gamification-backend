@@ -3,7 +3,7 @@ package usecase
 import "shopping-gamification/internal/domain"
 
 type ClaimUsecase interface {
-	CreateClaimRequest(req *domain.ClaimRequest) error
+	CreateClaimRequest(req *domain.ClaimRequestInput) (domain.ClaimRequest, error)
 	UpdateClaimRequestPrize(claimID int64, prizeID int64) error
 }
 
@@ -15,7 +15,7 @@ func NewClaimUsecase(repo domain.ClaimRepository) ClaimUsecase {
 	return &claimUsecase{repo: repo}
 }
 
-func (u *claimUsecase) CreateClaimRequest(req *domain.ClaimRequest) error {
+func (u *claimUsecase) CreateClaimRequest(req *domain.ClaimRequestInput) (domain.ClaimRequest, error) {
 	return u.repo.CreateClaimRequest(req)
 }
 
