@@ -3,13 +3,19 @@ package domain
 import "database/sql"
 
 type Product struct {
-	ID          int64   `json:"id"`
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Price       float64 `json:"price"`
-	ImageURL    string  `json:"image_url"`
-	Stock       int     `json:"stock"`
-	Status      bool    `json:"status"`
+	ID            int64   `json:"id"`
+	Name          string  `json:"name"`
+	Description   string  `json:"description"`
+	OriginalPrice float64 `json:"original_price"`
+	Price         float64 `json:"price"`
+	ImageURL      string  `json:"image_url"`
+	Stock         int     `json:"stock"`
+	Stars         float32 `json:"stars"`
+	Sold          int     `json:"sold"`
+	Review        int     `json:"review"`
+	ExternalLink  string  `json:"external_link"`
+	IsDigital     bool    `json:"is_digital"`
+	Status        bool    `json:"status"`
 }
 
 type Prize struct {
@@ -20,6 +26,7 @@ type Prize struct {
 	Quota              int    `json:"quota"`
 	RemainingQuota     int    `json:"remaining_quota"`
 	Status             bool   `json:"status"`
+	ImageURL           string `json:"image_url"`
 }
 
 type PrizeGroup struct {
@@ -29,6 +36,7 @@ type PrizeGroup struct {
 	Probability float64 `json:"probability"`
 	Status      bool    `json:"status"`
 	Prize       Prize   `json:"prize"`
+	DetailJson  string  `json:"detail_json"`
 }
 
 type ClaimRequest struct {
@@ -52,6 +60,21 @@ type ClaimRequest struct {
 	ClaimedAt           sql.NullString `json:"claimed_at"`
 }
 
+type SocialContent struct {
+	ProductID   int64  `json:"product_id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Platform    string `json:"platform"`
+	PostURL     string `json:"post_url"`
+}
+
+type PageHome struct {
+	TopProducts     []Product       `json:"top_products"`
+	DigitalProducts []Product       `json:"digital_products"`
+	SocialContents  []SocialContent `json:"social_contents"`
+	Prize           []Prize         `json:"prize"`
+}
+
 type ProductRepository interface {
 	GetProducts() ([]Product, error)
 	GetProductByID(productID int64) (Product, error)
@@ -62,4 +85,8 @@ type ClaimRepository interface {
 	CreateClaimRequest(req *ClaimRequestInput) (ClaimRequest, error)
 	GetClaimRequestByID(claimID int64) (ClaimRequest, error)
 	UpdateClaimRequestPrize(claimID int64, prizeID int64) error
+}
+
+type PageRepository interface {
+	GetPageHome() (PageHome, error)
 }

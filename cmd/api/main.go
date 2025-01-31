@@ -59,6 +59,7 @@ func main() {
 	repo := postgres.NewRepository(db)
 	productUsecase := usecase.NewProductUsecase(repo)
 	claimUsecase := usecase.NewClaimUsecase(repo)
+	pageUsecase := usecase.NewPageUsecase(repo)
 
 	// Initialize the Gin engine
 	r := gin.Default()
@@ -76,6 +77,7 @@ func main() {
 	// Initialize handler
 	handler.NewProductHandler(r, productUsecase)
 	handler.NewClaimHandler(r, claimUsecase)
+	handler.NewPageHandler(r, pageUsecase)
 
 	// Get port from environment variable
 	port := os.Getenv("PORT")
