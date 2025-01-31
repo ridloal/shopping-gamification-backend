@@ -1,4 +1,4 @@
-CREATE TYPE platform_enum AS ENUM ('facebook', 'instagram', 'twitter', 'youtube');
+CREATE TYPE platform_enum AS ENUM ('facebook', 'instagram', 'twitter', 'youtube', 'tiktok');
 
 CREATE TABLE social_contents (
     id SERIAL PRIMARY KEY,
