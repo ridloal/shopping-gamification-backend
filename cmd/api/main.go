@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"shopping-gamification/internal/delivery/http/handler"
 	"shopping-gamification/internal/repository/postgres"
+	"shopping-gamification/internal/repository/redis"
 	"shopping-gamification/internal/usecase"
 	"shopping-gamification/pkg/config"
 	"syscall"
@@ -17,26 +18,48 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
+	rdbDependency "github.com/redis/go-redis/v9"
 )
 
 func main() {
-	// Load configuration
+	cfg := loadConfig()
+	db := initializeDatabase(cfg)
+	rdb := initializeRedis(cfg)
+
+	// Initialize repositories
+	postgresRepo := postgres.NewRepository(db)
+	var redisRepo *redis.Repository
+	if rdb != nil {
+		redisRepo = redis.NewRepository(rdb)
+	}
+
+	// Initialize usecases
+	productUsecase := usecase.NewProductUsecase(postgresRepo)
+	claimUsecase := usecase.NewClaimUsecase(postgresRepo)
+	pageUsecase := usecase.NewPageUsecase(postgresRepo, redisRepo)
+
+	r := initializeGinEngine(db, rdb, &productUsecase, &claimUsecase, &pageUsecase)
+	startServer(r, db)
+}
+
+func loadConfig() *config.Config {
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Printf("Warning: %v", err)
 	}
+	return cfg
+}
 
-	// Create the connection string PostgreSQL
+func initializeDatabase(cfg *config.Config) *sql.DB {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName)
 
-	// Connect to the database with retry mechanism
 	var db *sql.DB
+	var err error
 	maxRetries := 5
 	for i := 0; i < maxRetries; i++ {
 		db, err = sql.Open("postgres", dsn)
 		if err == nil {
-			// Test the connection
 			err = db.Ping()
 			if err == nil {
 				break
@@ -48,23 +71,40 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to connect to database after retries: ", err)
 	}
-	defer db.Close()
 
-	// Set connection pool parameters
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(5)
 	db.SetConnMaxLifetime(time.Minute * 5)
 
-	// Initialize the repository and usecase
-	repo := postgres.NewRepository(db)
-	productUsecase := usecase.NewProductUsecase(repo)
-	claimUsecase := usecase.NewClaimUsecase(repo)
-	pageUsecase := usecase.NewPageUsecase(repo)
+	return db
+}
 
-	// Initialize the Gin engine
+func initializeRedis(cfg *config.Config) *rdbDependency.Client {
+	if cfg.RedisAddress == "" {
+		log.Println("Redis configuration not available, bypassing Redis")
+		return nil
+	}
+
+	rdb := rdbDependency.NewClient(&rdbDependency.Options{
+		Addr:     cfg.RedisAddress,
+		Username: cfg.RedisUser,
+		Password: cfg.RedisPassword,
+		DB:       0,
+	})
+
+	_, err := rdb.Ping(context.Background()).Result()
+	if err != nil {
+		log.Println("Failed to connect to Redis: ", err)
+		return nil
+	}
+
+	log.Println("Connected to Redis successfully")
+	return rdb
+}
+
+func initializeGinEngine(db *sql.DB, rdb *rdbDependency.Client, productUsecase *usecase.ProductUsecase, claimUsecase *usecase.ClaimUsecase, pageUsecase *usecase.PageUsecase) *gin.Engine {
 	r := gin.Default()
 
-	// Add health check endpoint
 	r.GET("/health-check", func(c *gin.Context) {
 		err := db.Ping()
 		if err != nil {
@@ -74,18 +114,28 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	// Initialize handler
-	handler.NewProductHandler(r, productUsecase)
-	handler.NewClaimHandler(r, claimUsecase)
-	handler.NewPageHandler(r, pageUsecase)
+	r.GET("/flush-redis", func(c *gin.Context) {
+		err := rdb.FlushAll(context.Background()).Err()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "failed to flush redis"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
 
-	// Get port from environment variable
+	handler.NewProductHandler(r, *productUsecase)
+	handler.NewClaimHandler(r, *claimUsecase)
+	handler.NewPageHandler(r, *pageUsecase)
+
+	return r
+}
+
+func startServer(r *gin.Engine, db *sql.DB) {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
-	// Create server with timeout configurations
 	srv := &http.Server{
 		Addr:         ":" + port,
 		Handler:      r,
@@ -94,7 +144,6 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// Start server in goroutine
 	go func() {
 		log.Printf("Server starting on port %s", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -102,19 +151,20 @@ func main() {
 		}
 	}()
 
-	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	log.Println("Shutting down server...")
 
-	// Create shutdown context with 5 second timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Shutdown server gracefully
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatal("Server forced to shutdown: ", err)
+	}
+
+	if err := db.Close(); err != nil {
+		log.Fatal("Failed to close database connection: ", err)
 	}
 
 	log.Println("Server exiting")

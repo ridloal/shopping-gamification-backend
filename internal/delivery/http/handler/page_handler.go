@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"shopping-gamification/internal/usecase"
 
@@ -17,7 +18,8 @@ func NewPageHandler(r *gin.Engine, u usecase.PageUsecase) {
 }
 
 func (h *PageHandler) GetPageHome(c *gin.Context) {
-	page, err := h.usecase.GetPageHome()
+	ctx := context.Background()
+	page, err := h.usecase.GetPageHome(ctx)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
