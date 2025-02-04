@@ -34,7 +34,7 @@ func main() {
 	}
 
 	// Initialize usecases
-	productUsecase := usecase.NewProductUsecase(postgresRepo)
+	productUsecase := usecase.NewProductUsecase(postgresRepo, redisRepo)
 	claimUsecase := usecase.NewClaimUsecase(postgresRepo)
 	pageUsecase := usecase.NewPageUsecase(postgresRepo, redisRepo)
 
