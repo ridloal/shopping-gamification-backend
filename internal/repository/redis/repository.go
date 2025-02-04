@@ -41,3 +41,15 @@ func (r *Repository) SetPageHome(ctx context.Context, pageHome domain.PageHome) 
 	}
 	return r.redis.Set(ctx, "page_home", data, 0).Err()
 }
+
+func (r *Repository) GetRedisValue(ctx context.Context, key string) (string, error) {
+	val, err := r.redis.Get(ctx, key).Result()
+	if err != nil {
+		return "", err
+	}
+	return val, nil
+}
+
+func (r *Repository) SetRedisValue(ctx context.Context, key string, value string) error {
+	return r.redis.Set(ctx, key, value, 0).Err()
+}

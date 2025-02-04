@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"shopping-gamification/internal/usecase"
 	"strconv"
@@ -20,7 +21,8 @@ func NewProductHandler(r *gin.Engine, u usecase.ProductUsecase) {
 }
 
 func (h *ProductHandler) GetProducts(c *gin.Context) {
-	products, err := h.usecase.GetProducts()
+	ctx := context.Background()
+	products, err := h.usecase.GetProducts(ctx)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
