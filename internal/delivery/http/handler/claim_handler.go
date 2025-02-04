@@ -19,6 +19,9 @@ func NewClaimHandler(r *gin.Engine, u usecase.ClaimUsecase) {
 	r.POST("/claims", middleware.ValidateRequest(&domain.ClaimRequestInput{}), handler.CreateClaimRequest)
 	r.GET("/claims/:id", handler.GetClaimRequestByID)
 	r.PATCH("/claims/:id/prizes/:prize_id", handler.UpdateClaimRequestPrize)
+	r.GET("/claims/code/:code", handler.GetClaimRequestByClaimCode)
+	r.GET("/claims/get-prize/:code", handler.ClaimPrize)
+
 }
 
 func (h *ClaimHandler) CreateClaimRequest(c *gin.Context) {
@@ -71,4 +74,24 @@ func (h *ClaimHandler) UpdateClaimRequestPrize(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Claim request updated"})
+}
+
+func (h *ClaimHandler) GetClaimRequestByClaimCode(c *gin.Context) {
+	claimCode := c.Param("code")
+	claimReq, err := h.usecase.GetClaimRequestByClaimCode(claimCode)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, claimReq)
+}
+
+func (h *ClaimHandler) ClaimPrize(c *gin.Context) {
+	claimCode := c.Param("code")
+	prizeReward, err := h.usecase.ClaimPrize(claimCode)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, prizeReward)
 }

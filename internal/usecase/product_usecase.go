@@ -12,7 +12,7 @@ const REDIS_KEY_PRODUCTS_LIST = "products_list"
 type ProductUsecase interface {
 	GetProducts(ctx context.Context) ([]domain.Product, error)
 	GetProductByID(id int64) (domain.Product, error)
-	GetPrizeGroupsByProductID(id int64) ([]domain.PrizeGroup, error)
+	GetPrizeGroupsByProductID(id int64) ([]domain.PrizeGroupResponse, error)
 }
 
 type productUsecase struct {
@@ -67,6 +67,22 @@ func (u *productUsecase) GetProductByID(id int64) (domain.Product, error) {
 	return u.repo.GetProductByID(id)
 }
 
-func (u *productUsecase) GetPrizeGroupsByProductID(id int64) ([]domain.PrizeGroup, error) {
-	return u.repo.GetPrizeGroupsByProductID(id)
+func (u *productUsecase) GetPrizeGroupsByProductID(id int64) ([]domain.PrizeGroupResponse, error) {
+	prizeGroups, err := u.repo.GetPrizeGroupsByProductID(id)
+	if err != nil {
+		return []domain.PrizeGroupResponse{}, err
+	}
+
+	var response []domain.PrizeGroupResponse
+	for _, pg := range prizeGroups {
+		response = append(response, domain.PrizeGroupResponse{
+			ID:        pg.ID,
+			ProductID: pg.ProductID,
+			PrizeID:   pg.PrizeID,
+			Status:    pg.Status,
+			Prize:     pg.Prize,
+		})
+	}
+
+	return response, nil
 }

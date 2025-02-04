@@ -44,6 +44,7 @@ type ClaimRequest struct {
 	UserID              *int64         `json:"user_id"`
 	ProductID           int64          `json:"product_id"`
 	PrizeID             *int64         `json:"prize_id"`
+	PrizeDetail         string         `json:"prize_detail"`
 	SocialMediaUsername string         `json:"social_media_username"`
 	SocialMediaPlatform string         `json:"social_media_platform"`
 	PostURL             string         `json:"post_url"`
@@ -84,7 +85,8 @@ type ProductRepository interface {
 type ClaimRepository interface {
 	CreateClaimRequest(req *ClaimRequestInput) (ClaimRequest, error)
 	GetClaimRequestByID(claimID int64) (ClaimRequest, error)
-	UpdateClaimRequestPrize(claimID int64, prizeID int64) error
+	UpdateClaimRequestPrize(claimID int64, prizeID int64, prizeDetail string) error
+	GetClaimRequestByClaimCode(claimCode string) (ClaimRequest, error)
 }
 
 type PageRepository interface {

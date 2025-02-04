@@ -35,7 +35,7 @@ func main() {
 
 	// Initialize usecases
 	productUsecase := usecase.NewProductUsecase(postgresRepo, redisRepo)
-	claimUsecase := usecase.NewClaimUsecase(postgresRepo)
+	claimUsecase := usecase.NewClaimUsecase(postgresRepo, postgresRepo)
 	pageUsecase := usecase.NewPageUsecase(postgresRepo, redisRepo)
 
 	r := initializeGinEngine(db, rdb, &productUsecase, &claimUsecase, &pageUsecase)

@@ -1,7 +1,11 @@
 package postgres
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/json"
+	"errors"
+	"math/big"
 	"shopping-gamification/internal/domain"
 )
 
@@ -54,7 +58,7 @@ func (r *Repository) GetProductByID(productID int64) (domain.Product, error) {
 func (r *Repository) GetPrizeGroupsByProductID(productID int64) ([]domain.PrizeGroup, error) {
 	query := `
         SELECT pg.id, pg.product_id, pg.prize_id, pg.probability, pg.status,
-               p.name, p.description, p.discount_percentage, p.quota, p.remaining_quota, p.status
+               p.name, p.description, p.discount_percentage, p.quota, p.remaining_quota, p.status, pg.detail_json
         FROM prize_groups pg
         JOIN prizes p ON pg.prize_id = p.id
         WHERE pg.product_id = $1 AND pg.status = true`
@@ -71,29 +75,47 @@ func (r *Repository) GetPrizeGroupsByProductID(productID int64) ([]domain.PrizeG
 		err := rows.Scan(
 			&pg.ID, &pg.ProductID, &pg.PrizeID, &pg.Probability, &pg.Status,
 			&pg.Prize.Name, &pg.Prize.Description, &pg.Prize.DiscountPercentage,
-			&pg.Prize.Quota, &pg.Prize.RemainingQuota, &pg.Prize.Status,
+			&pg.Prize.Quota, &pg.Prize.RemainingQuota, &pg.Prize.Status, &pg.DetailJson,
 		)
 		if err != nil {
 			return nil, err
 		}
+
+		pg.Prize.ID = pg.PrizeID
+
 		groups = append(groups, pg)
 	}
 	return groups, nil
 }
 
 func (r *Repository) CreateClaimRequest(req *domain.ClaimRequestInput) (domain.ClaimRequest, error) {
-	query := `
-		INSERT INTO claim_requests 
-		(product_id, social_media_username, social_media_platform, post_url, nomor_whatsapp, email)
-		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, product_id, social_media_username, social_media_platform, post_url, nomor_whatsapp, email`
 
+	claimCode := generateClaimCode()
 	var claimRequest domain.ClaimRequest
-	err := r.db.QueryRow(query, req.ProductID, req.SocialMediaUsername,
-		req.SocialMediaPlatform, req.PostURL, req.NomorWhatsapp, req.Email).Scan(
-		&claimRequest.ID, &claimRequest.ProductID, &claimRequest.SocialMediaUsername,
-		&claimRequest.SocialMediaPlatform, &claimRequest.PostURL, &claimRequest.NomorWhatsapp, &claimRequest.Email)
-	if err != nil {
-		return domain.ClaimRequest{}, err
+
+	maxRetries := 3
+	retryCount := 0
+
+	for {
+		query := `
+        INSERT INTO claim_requests 
+        (product_id, social_media_username, social_media_platform, post_url, nomor_whatsapp, email, is_liked, is_comment, is_shared, is_follow, claim_code)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, product_id, social_media_username, social_media_platform, post_url, nomor_whatsapp, email, is_liked, is_comment, is_shared, is_follow, claim_code, verification_status`
+
+		err := r.db.QueryRow(query, req.ProductID, req.SocialMediaUsername,
+			req.SocialMediaPlatform, req.PostURL, req.NomorWhatsapp, req.Email, req.IsLiked, req.IsComment, req.IsShared, req.IsFollow, claimCode).Scan(
+			&claimRequest.ID, &claimRequest.ProductID, &claimRequest.SocialMediaUsername,
+			&claimRequest.SocialMediaPlatform, &claimRequest.PostURL, &claimRequest.NomorWhatsapp, &claimRequest.Email, &claimRequest.IsLiked, &claimRequest.IsComment, &claimRequest.IsShared, &claimRequest.IsFollow, &claimRequest.ClaimCode, &claimRequest.VerificationStatus)
+		if err != nil {
+			if retryCount < maxRetries {
+				// Generate a new claim code and retry
+				claimCode = generateClaimCode()
+				retryCount++
+				continue
+			}
+			return domain.ClaimRequest{}, err
+		}
+		break
 	}
 
 	return claimRequest, nil
@@ -117,9 +139,47 @@ func (r *Repository) GetClaimRequestByID(claimID int64) (domain.ClaimRequest, er
 	return claimReq, nil
 }
 
-func (r *Repository) UpdateClaimRequestPrize(claimID int64, prizeID int64) error {
-	query := `UPDATE claim_requests SET prize_id = $1 WHERE id = $2`
-	_, err := r.db.Exec(query, prizeID, claimID)
+func (r *Repository) GetClaimRequestByClaimCode(claimCode string) (domain.ClaimRequest, error) {
+	query := `SELECT id, product_id, social_media_username, social_media_platform, post_url, nomor_whatsapp, email, verification_status, claim_code, is_liked, is_comment, is_shared, is_follow, prize_id, user_id, created_at, updated_at, claimed_at, prize_detail FROM claim_requests WHERE claim_code = $1`
+	rows, err := r.db.Query(query, claimCode)
+
+	if err != nil {
+		return domain.ClaimRequest{}, err
+	}
+	defer rows.Close()
+
+	var claimReq domain.ClaimRequest
+	for rows.Next() {
+		err := rows.Scan(&claimReq.ID, &claimReq.ProductID, &claimReq.SocialMediaUsername, &claimReq.SocialMediaPlatform, &claimReq.PostURL, &claimReq.NomorWhatsapp, &claimReq.Email, &claimReq.VerificationStatus, &claimReq.ClaimCode, &claimReq.IsLiked, &claimReq.IsComment, &claimReq.IsShared, &claimReq.IsFollow, &claimReq.PrizeID, &claimReq.UserID, &claimReq.CreatedAt, &claimReq.UpdatedAt, &claimReq.ClaimedAt, &claimReq.PrizeDetail)
+		if err != nil {
+			return domain.ClaimRequest{}, err
+		}
+	}
+	return claimReq, nil
+}
+
+func (r *Repository) UpdateClaimRequestPrize(claimID int64, prizeID int64, prizeDetail string) error {
+	// Validate prizeDetail as a JSON string
+	var js json.RawMessage
+	if err := json.Unmarshal([]byte(prizeDetail), &js); err != nil {
+		prizeDetail = "{}"
+	}
+
+	query := `UPDATE claim_requests SET prize_id = $1, prize_detail = $2, verification_status = 'claimed', claimed_at = now() WHERE id = $3 AND verification_status = 'verified'`
+	val, err := r.db.Exec(query, prizeID, prizeDetail, claimID)
+
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := val.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return errors.New("update prize is not eligible for this claim request, verification status must be verified")
+	}
+
 	return err
 }
 
@@ -222,4 +282,17 @@ func (r *Repository) GetPageHome() (domain.PageHome, error) {
 	}
 
 	return pageHome, nil
+}
+
+func generateClaimCode() string {
+	charset := "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	codeLength := 8
+	code := make([]byte, codeLength)
+
+	for i := range code {
+		num, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		code[i] = charset[num.Int64()]
+	}
+
+	return string(code)
 }

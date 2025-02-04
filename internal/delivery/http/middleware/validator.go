@@ -3,6 +3,7 @@ package middleware
 import (
 	"fmt"
 	"net/http"
+	"shopping-gamification/internal/domain"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -20,7 +21,7 @@ func ValidateRequest(input interface{}) gin.HandlerFunc {
 			return
 		}
 
-		validate := validator.New()
+		validate := domain.NewValidator()
 		if err := validate.Struct(input); err != nil {
 			errors := err.(validator.ValidationErrors)
 			errMessages := make(map[string]string)
