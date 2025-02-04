@@ -48,4 +48,8 @@ jobs:
             --set-env-vars "DB_USER=${{ secrets.DB_USER }}" \
             --set-env-vars "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
             --set-env-vars "DB_PORT=${{ secrets.DB_PORT }}" \
-            --set-env-vars "DB_NAME=${{ secrets.DB_NAME }}"
+            --set-env-vars "DB_NAME=${{ secrets.DB_NAME }}" \
+            --set-env-vars "REDIS_ADDRESS=${{ secrets.REDIS_ADDRESS }}" \
+            --set-env-vars "REDIS_USERNAME=${{ secrets.REDIS_USERNAME }}" \
+            --set-env-vars "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" \
+            --set-env-vars "REDIS_DB=${{ secrets.REDIS_DB }}"
