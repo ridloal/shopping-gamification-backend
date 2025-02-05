@@ -124,7 +124,7 @@ func initializeGinEngine(db *sql.DB, rdb *rdbDependency.Client, productUsecase *
 	})
 
 	handler.NewProductHandler(r, *productUsecase)
-	handler.NewClaimHandler(r, *claimUsecase)
+	handler.NewClaimHandler(r, *claimUsecase, rdb)
 	handler.NewPageHandler(r, *pageUsecase)
 
 	return r

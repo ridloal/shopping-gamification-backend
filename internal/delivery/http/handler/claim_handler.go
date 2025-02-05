@@ -6,17 +6,20 @@ import (
 	"shopping-gamification/internal/domain"
 	"shopping-gamification/internal/usecase"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
 type ClaimHandler struct {
 	usecase usecase.ClaimUsecase
 }
 
-func NewClaimHandler(r *gin.Engine, u usecase.ClaimUsecase) {
+func NewClaimHandler(r *gin.Engine, u usecase.ClaimUsecase, rdb *redis.Client) {
 	handler := &ClaimHandler{usecase: u}
-	r.POST("/claims", middleware.ValidateRequest(&domain.ClaimRequestInput{}), handler.CreateClaimRequest)
+
+	r.POST("/claims", middleware.RateLimiter(rdb, 1, time.Minute), middleware.ValidateRequest(&domain.ClaimRequestInput{}), handler.CreateClaimRequest)
 	r.GET("/claims/:id", handler.GetClaimRequestByID)
 	r.PATCH("/claims/:id/prizes/:prize_id", handler.UpdateClaimRequestPrize)
 	r.GET("/claims/code/:code", handler.GetClaimRequestByClaimCode)
