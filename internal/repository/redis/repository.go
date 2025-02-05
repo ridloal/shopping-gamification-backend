@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"shopping-gamification/internal/domain"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -39,7 +40,7 @@ func (r *Repository) SetPageHome(ctx context.Context, pageHome domain.PageHome) 
 	if err != nil {
 		return err
 	}
-	return r.redis.Set(ctx, "page_home", data, 3600).Err()
+	return r.redis.Set(ctx, "page_home", data, 3600*time.Second).Err()
 }
 
 func (r *Repository) GetRedisValue(ctx context.Context, key string) (string, error) {
@@ -51,5 +52,5 @@ func (r *Repository) GetRedisValue(ctx context.Context, key string) (string, err
 }
 
 func (r *Repository) SetRedisValue(ctx context.Context, key string, value string) error {
-	return r.redis.Set(ctx, key, value, 3600).Err()
+	return r.redis.Set(ctx, key, value, 3600*time.Second).Err()
 }
