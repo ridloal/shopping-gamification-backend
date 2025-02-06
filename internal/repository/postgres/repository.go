@@ -58,7 +58,7 @@ func (r *Repository) GetProductByID(productID int64) (domain.Product, error) {
 func (r *Repository) GetPrizeGroupsByProductID(productID int64) ([]domain.PrizeGroup, error) {
 	query := `
         SELECT pg.id, pg.product_id, pg.prize_id, pg.probability, pg.status,
-               p.name, p.description, p.discount_percentage, p.quota, p.remaining_quota, p.status, pg.detail_json
+               p.name, p.description, p.discount_percentage, p.quota, p.remaining_quota, p.status, pg.detail_json, p.image_url
         FROM prize_groups pg
         JOIN prizes p ON pg.prize_id = p.id
         WHERE pg.product_id = $1 AND pg.status = true`
@@ -75,7 +75,7 @@ func (r *Repository) GetPrizeGroupsByProductID(productID int64) ([]domain.PrizeG
 		err := rows.Scan(
 			&pg.ID, &pg.ProductID, &pg.PrizeID, &pg.Probability, &pg.Status,
 			&pg.Prize.Name, &pg.Prize.Description, &pg.Prize.DiscountPercentage,
-			&pg.Prize.Quota, &pg.Prize.RemainingQuota, &pg.Prize.Status, &pg.DetailJson,
+			&pg.Prize.Quota, &pg.Prize.RemainingQuota, &pg.Prize.Status, &pg.DetailJson, &pg.Prize.ImageURL,
 		)
 		if err != nil {
 			return nil, err
