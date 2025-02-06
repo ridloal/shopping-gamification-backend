@@ -19,7 +19,7 @@ type ClaimHandler struct {
 func NewClaimHandler(r *gin.Engine, u usecase.ClaimUsecase, rdb *redis.Client) {
 	handler := &ClaimHandler{usecase: u}
 
-	r.POST("/claims", middleware.RateLimiter(rdb, 1, time.Minute), middleware.ValidateRequest(&domain.ClaimRequestInput{}), handler.CreateClaimRequest)
+	r.POST("/claims", middleware.RateLimiter(rdb, 3, 2*time.Minute), middleware.ValidateRequest(&domain.ClaimRequestInput{}), handler.CreateClaimRequest)
 	r.GET("/claims/:id", handler.GetClaimRequestByID)
 	r.PATCH("/claims/:id/prizes/:prize_id", handler.UpdateClaimRequestPrize)
 	r.GET("/claims/code/:code", handler.GetClaimRequestByClaimCode)

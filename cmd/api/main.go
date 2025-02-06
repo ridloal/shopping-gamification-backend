@@ -105,6 +105,20 @@ func initializeRedis(cfg *config.Config) *rdbDependency.Client {
 func initializeGinEngine(db *sql.DB, rdb *rdbDependency.Client, productUsecase *usecase.ProductUsecase, claimUsecase *usecase.ClaimUsecase, pageUsecase *usecase.PageUsecase) *gin.Engine {
 	r := gin.Default()
 
+	r.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusOK)
+			return
+		}
+
+		c.Next()
+	})
+
 	r.GET("/health-check", func(c *gin.Context) {
 		err := db.Ping()
 		if err != nil {

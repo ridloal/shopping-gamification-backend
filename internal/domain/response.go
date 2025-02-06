@@ -7,3 +7,11 @@ type PrizeGroupResponse struct {
 	Status    bool  `json:"status"`
 	Prize     Prize `json:"prize"`
 }
+
+type PrizeResponse struct {
+	PGID       int64  `json:"pg_id"`
+	DetailJson string `json:"detail_json"`
+	PrizeName  string `json:"prize_name"`
+	PrizeDesc  string `json:"prize_desc"`
+	ImageURL   string `json:"image_url"`
+}

@@ -10,7 +10,7 @@ type ClaimUsecase interface {
 	GetClaimRequestByID(claimID int64) (domain.ClaimRequest, error)
 	UpdateClaimRequestPrize(claimID int64, prizeID int64) error
 	GetClaimRequestByClaimCode(claimCode string) (domain.ClaimRequest, error)
-	ClaimPrize(claimCode string) (domain.Prize, error)
+	ClaimPrize(claimCode string) (domain.PrizeResponse, error)
 }
 
 type claimUsecase struct {
@@ -41,24 +41,32 @@ func (u *claimUsecase) GetClaimRequestByClaimCode(claimCode string) (domain.Clai
 	return u.repo.GetClaimRequestByClaimCode(claimCode)
 }
 
-func (u *claimUsecase) ClaimPrize(claimCode string) (domain.Prize, error) {
+func (u *claimUsecase) ClaimPrize(claimCode string) (domain.PrizeResponse, error) {
 	claimRequest, err := u.repo.GetClaimRequestByClaimCode(claimCode)
 	if err != nil {
-		return domain.Prize{}, err
+		return domain.PrizeResponse{}, err
 	}
 
 	prizeGroup, err := u.repoProduct.GetPrizeGroupsByProductID(claimRequest.ProductID)
 	if err != nil {
-		return domain.Prize{}, err
+		return domain.PrizeResponse{}, err
 	}
 
 	prize := generateRandomPrizeID(prizeGroup)
 	err = u.repo.UpdateClaimRequestPrize(claimRequest.ID, prize.PrizeID, prize.DetailJson)
 	if err != nil {
-		return domain.Prize{}, err
+		return domain.PrizeResponse{}, err
 	}
 
-	return prize.Prize, nil
+	prizeResp := domain.PrizeResponse{
+		PGID:       prize.ID,
+		DetailJson: prize.DetailJson,
+		PrizeName:  prize.Prize.Name,
+		PrizeDesc:  prize.Prize.Description,
+		ImageURL:   prize.Prize.ImageURL,
+	}
+
+	return prizeResp, nil
 }
 
 // function to generate random prize id by the probability
