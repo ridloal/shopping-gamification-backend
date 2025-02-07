@@ -137,6 +137,30 @@ func initializeGinEngine(db *sql.DB, rdb *rdbDependency.Client, productUsecase *
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
+	// implement direct query to database. for testing
+	r.GET("/bot-verify", func(c *gin.Context) {
+		var result []string
+
+		rows, err := db.Query("UPDATE claim_requests SET verification_status = 'verified', updated_at = NOW() WHERE verification_status = 'pending' AND (NOW() - created_at) > INTERVAL '2 minutes' RETURNING id")
+		if err != nil && err != sql.ErrNoRows {
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": err})
+			return
+		}
+
+		rows.Close()
+
+		for rows.Next() {
+			var id string
+			err = rows.Scan(&id)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": err})
+				return
+			}
+			result = append(result, id)
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
 	handler.NewProductHandler(r, *productUsecase)
 	handler.NewClaimHandler(r, *claimUsecase, rdb)
 	handler.NewPageHandler(r, *pageUsecase)
