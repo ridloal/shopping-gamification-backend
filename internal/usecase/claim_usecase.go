@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"encoding/json"
 	"math/rand/v2"
 	"shopping-gamification/internal/domain"
 )
@@ -53,14 +54,31 @@ func (u *claimUsecase) ClaimPrize(claimCode string) (domain.PrizeResponse, error
 	}
 
 	prize := generateRandomPrizeID(prizeGroup)
-	err = u.repo.UpdateClaimRequestPrize(claimRequest.ID, prize.PrizeID, prize.DetailJson)
+
+	// Unmarshal prize.DetailJson to a map
+	var detailMap map[string]interface{}
+	err = json.Unmarshal([]byte(prize.DetailJson), &detailMap)
+	if err != nil {
+		return domain.PrizeResponse{}, err
+	}
+
+	// Add prize.Prize to the detailMap
+	detailMap["prize"] = prize.Prize
+
+	// Marshal the updated detailMap back to JSON string
+	updatedDetailJson, err := json.Marshal(detailMap)
+	if err != nil {
+		return domain.PrizeResponse{}, err
+	}
+
+	err = u.repo.UpdateClaimRequestPrize(claimRequest.ID, prize.PrizeID, string(updatedDetailJson))
 	if err != nil {
 		return domain.PrizeResponse{}, err
 	}
 
 	prizeResp := domain.PrizeResponse{
 		PGID:       prize.ID,
-		DetailJson: prize.DetailJson,
+		DetailJson: string(updatedDetailJson),
 		PrizeName:  prize.Prize.Name,
 		PrizeDesc:  prize.Prize.Description,
 		ImageURL:   prize.Prize.ImageURL,
